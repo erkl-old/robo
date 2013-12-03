@@ -41,10 +41,12 @@ func (m *Mux) Add(method, pattern string, handler http.Handler) {
 // ServeHTTP routes an incoming request to a matching handler.
 func (m *Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	pattern := split(r.URL.Path)
-	methods := m.search(pattern)
+	methods := make(map[string]*entry)
+
+	m.search(pattern, methods)
 
 	// not found
-	if methods == nil {
+	if len(methods) == 0 {
 		http.Error(w, "404", 404)
 		return
 	}
@@ -149,26 +151,27 @@ func (n *node) add(method string, path []string, ent *entry) {
 // search recursively searches the node and its children for handlers matching
 // a sequence of path fragments. It returns a map of method names to handler
 // entries.
-func (n *node) search(path []string) map[string]*entry {
+func (n *node) search(path []string, out map[string]*entry) {
 	if len(path) == 0 {
-		return n.m
+		for m, e := range n.m {
+			if out[m] == nil {
+				out[m] = e
+			}
+		}
+		return
 	}
 
 	frag := path[0]
 
 	// do we have a child node matching this path fragment?
 	if child := n.c[frag]; child != nil {
-		if m := child.search(path[1:]); m != nil {
-			return m
-		}
+		child.search(path[1:], out)
 	}
 
-	// if not, try the wildcard node
+	// also try the wildcard
 	if frag != "" && n.w != nil {
-		return n.w.search(path[1:])
+		n.w.search(path[1:], out)
 	}
-
-	return nil
 }
 
 // split separates an URL path to a sequence of fragments.
