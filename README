@@ -1,0 +1,22 @@
+robo provides a tiny HTTP framework. A simple server might look
+something like this:
+
+    package main
+
+    import (
+        "fmt"
+        "github.com/erkl/robo"
+        "net/http"
+    )
+
+    func echo(w http.ResponseWriter, r *http.Request) {
+        fmt.Fprintf(w, "%s\n", r.URL.Query().Get(":message"))
+    }
+
+    func main() {
+        mux := robo.NewMux()
+        mux.Add("GET", "/echo/:message", http.HandlerFunc(echo))
+        http.ListenAndServe(":3000", mux)
+    }
+
+Read the documentation at http://godoc.org/github.com/erkl/robo.
