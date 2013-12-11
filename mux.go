@@ -40,7 +40,7 @@ type Request struct {
 	*http.Request
 
 	// named URL parameters for this request and route
-	Params *Parameters
+	params map[string]string
 
 	// reference to the queue
 	queue *queue
@@ -50,6 +50,14 @@ type Request struct {
 // blocking until said handler has returned.
 func (r *Request) Next(w ResponseWriter) {
 	r.queue.serveNext(w, r.Request)
+}
+
+// Param returns the value of a named URL parameter.
+func (r *Request) Param(name string) string {
+	if r.params != nil {
+		return r.params[name]
+	}
+	return ""
 }
 
 // Mux is a HTTP router. It multiplexes incoming requests to different
@@ -97,7 +105,7 @@ func (m *Mux) Add(method, pattern string, handlers ...interface{}) {
 // ServeRoboHTTP dispatches the request to matching routes registered with
 // the Mux instance.
 func (m *Mux) ServeRoboHTTP(w ResponseWriter, r *Request) {
-	q := queue{nil, m.routes, r.Params, nil}
+	q := queue{nil, nil, m.routes}
 	q.serveNext(w, r.Request)
 }
 
@@ -129,23 +137,21 @@ func newRoute(method, pattern string, handlers []Handler) route {
 	return r
 }
 
-// Check tests whether the route matches a provided method and path. The second
-// return value will always be non-nil when the first is true.
-func (r *route) Check(method, path string) (bool, *Parameters) {
+// Check tests whether the route matches a provided method and path. The
+// parameter map will always be non-nil when the first is true.
+func (r *route) Check(method, path string) (bool, map[string]string) {
 	// @todo
 	return false, nil
 }
 
 // The queue type holds the routing state of an incoming request.
 type queue struct {
-	// slices of the handlers remaining in the currently executing
-	// route, as well as all routes yet to be checked
+	// remaining handlers, and parameter map, for the current route
 	handlers []Handler
-	routes   []route
+	params   map[string]string
 
-	// URL parameters
-	parent *Parameters
-	self   *Parameters
+	// remaining routes to be tested
+	routes []route
 }
 
 // ServeNext attempts to serve an HTTP request using the next matching
@@ -156,7 +162,7 @@ func (q *queue) serveNext(w ResponseWriter, hr *http.Request) {
 		h := q.handlers[0]
 		q.handlers = q.handlers[1:]
 
-		h.ServeRoboHTTP(w, &Request{hr, q.self, q})
+		h.ServeRoboHTTP(w, &Request{hr, q.params, q})
 		return
 	}
 
@@ -172,40 +178,10 @@ func (q *queue) serveNext(w ResponseWriter, hr *http.Request) {
 		}
 
 		q.handlers = r.handlers[1:]
-		q.self = params
-		q.self.parent = q.parent
+		q.params = params
 
 		// invoke the route's first handler
-		r.handlers[0].ServeRoboHTTP(w, &Request{hr, q.self, q})
+		r.handlers[0].ServeRoboHTTP(w, &Request{hr, q.params, q})
 		return
 	}
-}
-
-// The Parameters type stores the values associated with URL
-// parameter keys.
-type Parameters struct {
-	parent *Parameters
-	values map[string]string
-}
-
-// set assigns a value to a key.
-func (p *Parameters) set(key, value string) {
-	if p.values == nil {
-		p.values = make(map[string]string)
-	}
-	p.values[key] = value
-}
-
-// Get reads the value associated with a key, defaulting to an empty
-// string if not defined.
-func (p *Parameters) Get(key string) string {
-	if p.values != nil {
-		if v := p.values[key]; v != "" {
-			return v
-		}
-	}
-	if p.parent != nil {
-		return p.parent.Get(key)
-	}
-	return ""
 }
