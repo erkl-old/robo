@@ -5,9 +5,9 @@ import (
 )
 
 var segmentTests = []struct {
-	s  segment
-	in string
-	n  int
+	segment segment
+	input   string
+	n       int
 }{
 	{segment{0, "/foo", nil}, "/foo", 4},
 	{segment{0, "/foo", nil}, "/bar", 0},
@@ -30,19 +30,19 @@ var segmentTests = []struct {
 
 func TestSegmentMatch(t *testing.T) {
 	for _, test := range segmentTests {
-		if n := test.s.Match(test.in); n != test.n {
-			t.Errorf("%+v.Match(%q)\n", test.s, test.in)
-			t.Errorf("  got  %d\n", n)
-			t.Errorf("  want %d\n", test.n)
+		if n := test.segment.Match(test.input); n != test.n {
+			t.Errorf("%+v.Match(%q)", test.segment, test.input)
+			t.Errorf("  got  %d", n)
+			t.Errorf("  want %d", test.n)
 		}
 	}
 }
 
 var patternTests = []struct {
-	p  pattern
-	in string
-	ok bool
-	m  map[string]string
+	pattern pattern
+	input   string
+	ok      bool
+	params  map[string]string
 }{
 	{[]segment{segment{0, "/", nil}}, "/", true, nil},
 	{[]segment{segment{0, "/foo/", nil}, segment{3, "", nil}}, "/foo/bar", true, nil},
@@ -56,13 +56,13 @@ var patternTests = []struct {
 
 func TestPatternMatch(t *testing.T) {
 	for _, test := range patternTests {
-		ok, m := test.p.Match(test.in)
-		if ok != test.ok || len(m) != len(test.m) {
+		ok, params := test.pattern.Match(test.input)
+		if ok != test.ok || len(params) != len(test.params) {
 			goto fail
 		}
 
-		for key := range m {
-			if m[key] != test.m[key] {
+		for key := range params {
+			if params[key] != test.params[key] {
 				goto fail
 			}
 		}
@@ -70,8 +70,8 @@ func TestPatternMatch(t *testing.T) {
 		continue
 
 	fail:
-		t.Errorf("%+v.Match(%q):", test.p, test.in)
-		t.Errorf("  want %v, %+v", test.ok, test.m)
-		t.Errorf("  want %v, %+v", ok, m)
+		t.Errorf("%+v.Match(%q):", test.pattern, test.input)
+		t.Errorf("  want %v, %+v", test.ok, test.params)
+		t.Errorf("  want %v, %+v", ok, params)
 	}
 }
