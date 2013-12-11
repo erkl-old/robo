@@ -37,3 +37,41 @@ func TestSegmentMatch(t *testing.T) {
 		}
 	}
 }
+
+var patternTests = []struct {
+	p  pattern
+	in string
+	ok bool
+	m  map[string]string
+}{
+	{[]segment{segment{0, "/", nil}}, "/", true, nil},
+	{[]segment{segment{0, "/foo/", nil}, segment{3, "", nil}}, "/foo/bar", true, nil},
+	{[]segment{segment{0, "/foo/", nil}, segment{3, "", nil}}, "/foo-bar", false, nil},
+	{[]segment{segment{0, "/", nil}, segment{1, "a", nil}}, "/foo", true, map[string]string{"a": "foo"}},
+	{[]segment{segment{0, "/", nil}, segment{1, "b", nil}}, "/foo-bar", true, map[string]string{"b": "foo-bar"}},
+	{[]segment{segment{0, "/", nil}, segment{1, "b", nil}}, "/foo/bar", false, nil},
+	{[]segment{segment{0, "/", nil}, segment{1, "a", nil}, segment{0, "/", nil}, segment{2, "b", []rune{'a', 'z'}}}, "/foo/bar", true, map[string]string{"a": "foo", "b": "bar"}},
+	{[]segment{segment{0, "/", nil}, segment{1, "a", nil}, segment{0, "/", nil}, segment{2, "b", []rune{'a', 'z'}}}, "/foo/123", false, nil},
+}
+
+func TestPatternMatch(t *testing.T) {
+	for _, test := range patternTests {
+		ok, m := test.p.Match(test.in)
+		if ok != test.ok || len(m) != len(test.m) {
+			goto fail
+		}
+
+		for key := range m {
+			if m[key] != test.m[key] {
+				goto fail
+			}
+		}
+
+		continue
+
+	fail:
+		t.Errorf("%+v.Match(%q):", test.p, test.in)
+		t.Errorf("  want %v, %+v", test.ok, test.m)
+		t.Errorf("  want %v, %+v", ok, m)
+	}
+}

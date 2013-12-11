@@ -1,5 +1,40 @@
 package robo
 
+// A pattern is a compiled URL pattern matcher.
+type pattern []segment
+
+// Match returns true if the input string matches the pattern, along with
+// a map of all captured parameters.
+func (p pattern) Match(in string) (bool, map[string]string) {
+	params := make(map[string]string)
+
+	// check each segment in order
+	for _, segment := range p {
+		if in == "" {
+			return false, nil
+		}
+
+		n := segment.Match(in)
+		if n == 0 {
+			return false, nil
+		}
+
+		// save the parameter
+		if name := segment.Name(); name != "" {
+			params[name] = in[:n]
+		}
+
+		in = in[n:]
+	}
+
+	// if the whole URL wasn't consumed, we don't have a match
+	if len(in) != 0 {
+		return false, nil
+	}
+
+	return true, params
+}
+
 // The segment type performs string matching on a part of a pattern.
 type segment struct {
 	t int
