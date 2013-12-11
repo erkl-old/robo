@@ -30,8 +30,8 @@ var segmentTests = []struct {
 
 func TestSegmentMatch(t *testing.T) {
 	for _, test := range segmentTests {
-		if n := test.segment.Match(test.input); n != test.n {
-			t.Errorf("%+v.Match(%q)", test.segment, test.input)
+		if n := test.segment.match(test.input); n != test.n {
+			t.Errorf("%+v.match(%q)", test.segment, test.input)
 			t.Errorf("  got  %d", n)
 			t.Errorf("  want %d", test.n)
 		}
@@ -56,7 +56,7 @@ var patternTests = []struct {
 
 func TestPatternMatch(t *testing.T) {
 	for _, test := range patternTests {
-		ok, params := test.pattern.Match(test.input)
+		ok, params := test.pattern.match(test.input)
 		if ok != test.ok || len(params) != len(test.params) {
 			goto fail
 		}
@@ -70,7 +70,7 @@ func TestPatternMatch(t *testing.T) {
 		continue
 
 	fail:
-		t.Errorf("%+v.Match(%q):", test.pattern, test.input)
+		t.Errorf("%+v.match(%q):", test.pattern, test.input)
 		t.Errorf("  want %v, %+v", test.ok, test.params)
 		t.Errorf("  want %v, %+v", ok, params)
 	}

@@ -137,9 +137,9 @@ func newRoute(method, pattern string, handlers []Handler) route {
 	return r
 }
 
-// Check tests whether the route matches a provided method and path. The
+// check tests whether the route matches a provided method and path. The
 // parameter map will always be non-nil when the first is true.
-func (r *route) Check(method, path string) (bool, map[string]string) {
+func (r *route) check(method, path string) (bool, map[string]string) {
 	// @todo
 	return false, nil
 }
@@ -172,7 +172,7 @@ func (q *queue) serveNext(w ResponseWriter, hr *http.Request) {
 		q.routes = q.routes[1:]
 
 		// does this route match the request at hand?
-		ok, params := r.Check(hr.Method, hr.URL.Path)
+		ok, params := r.check(hr.Method, hr.URL.Path)
 		if !ok {
 			continue
 		}
