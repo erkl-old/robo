@@ -11,7 +11,7 @@ var patternTests = []struct {
 	params  map[string]string
 }{
 	{[]segment{segment{0, "/", nil}}, "/", true, nil},
-	{[]segment{segment{0, "/foo/", nil}, segment{3, "", nil}}, "/foo/bar", true, nil},
+	{[]segment{segment{0, "/foo/", nil}, segment{3, "", nil}}, "/foo/bar", true, map[string]string{"*": "bar"}},
 	{[]segment{segment{0, "/foo/", nil}, segment{3, "", nil}}, "/foo-bar", false, nil},
 	{[]segment{segment{0, "/", nil}, segment{1, "a", nil}}, "/foo", true, map[string]string{"a": "foo"}},
 	{[]segment{segment{0, "/", nil}, segment{1, "b", nil}}, "/foo-bar", true, map[string]string{"b": "foo-bar"}},

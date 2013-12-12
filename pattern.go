@@ -93,8 +93,11 @@ func (s *segment) match(in string) int {
 
 // Name returns the parameter name of the segment.
 func (s *segment) Name() string {
-	if s.t == 1 || s.t == 2 {
+	switch s.t {
+	case 1, 2:
 		return s.s
+	case 3:
+		return "*"
 	}
 	return ""
 }
