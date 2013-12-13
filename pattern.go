@@ -1,103 +1,278 @@
 package robo
 
+import (
+	"errors"
+)
+
+// Definitions of all possible pattern compilation errors.
+var (
+	errEmptyPattern   = errors.New("robo: empty pattern")
+	errEmptyParameter = errors.New("robo: empty parameter name")
+	errEmptyCharset   = errors.New("robo: empty charset")
+
+	errCharsetHasSlash = errors.New("robo: parameter charset includes '/'")
+	errIllegalWildcard = errors.New("robo: illegal '*' position")
+	errImpossibleRange = errors.New("robo: impossible charset range")
+
+	errUnexpectedHyphen   = errors.New("robo: unexpected '-'")
+	errUnexpectedLBracket = errors.New("robo: unexpected '['")
+	errUnexpectedRBracket = errors.New("robo: unexpected ']'")
+	errMissingRBrace      = errors.New("robo: missing closing '}'")
+	errMissingRBracket    = errors.New("robo: missing closing ']'")
+)
+
 // A pattern is a compiled URL pattern matcher.
-type pattern []segment
+type pattern []fragment
 
-// match returns true if the input string matches the pattern, along with
-// a map of all captured parameters.
-func (p pattern) match(in string) (bool, map[string]string) {
-	params := make(map[string]string)
+// Match returns true as well as a slice of captured parameters in the form
+// of [key, value] pairs (appended to buf), if the input string matches the
+// pattern.
+func (p pattern) Match(in string, buf []string) (bool, []string) {
+	var n int
 
-	// check each segment in order
-	for _, segment := range p {
+	// check each fragment in order
+	for _, f := range p {
 		if in == "" {
 			return false, nil
 		}
 
-		n := segment.match(in)
+		n, buf = f.Match(in, buf)
 		if n == 0 {
 			return false, nil
-		}
-
-		// save the parameter
-		if name := segment.Name(); name != "" {
-			params[name] = in[:n]
 		}
 
 		in = in[n:]
 	}
 
-	// if the whole URL wasn't consumed, we don't have a match
-	if len(in) != 0 {
+	// make sure the whole string has been consumed
+	if in != "" {
 		return false, nil
 	}
 
-	return true, params
+	return true, buf
 }
 
-// The segment type performs string matching on a part of a pattern.
-type segment struct {
+// The segment type describes a rule to be used when matching a
+// subset of a pattern.
+type fragment struct {
 	t int
 	s string
 	r []rune
 }
 
-// match looks for a match at the beginning of the input string, returning the
-// size of the match in bytes.
-func (s *segment) match(in string) int {
-	switch s.t {
-	// literal prefix
+// Match is the fragment-level equivalent of pattern.Match.
+func (f *fragment) Match(in string, buf []string) (int, []string) {
+	switch f.t {
+	// literal fragment
 	case 0:
-		if len(in) < len(s.s) {
-			return 0
+		if len(in) < len(f.s) {
+			return 0, nil
 		}
-		for i := 0; i < len(s.s); i++ {
-			if s.s[i] != in[i] {
-				return 0
+		for i := 0; i < len(f.s); i++ {
+			if f.s[i] != in[i] {
+				return 0, nil
 			}
 		}
-		return len(s.s)
+		return len(f.s), buf
 
-	// wildcard parameter
+	// exclusive parameter fragment
 	case 1:
 		for i, r := range in {
-			if r == '/' {
-				return i
+			for _, e := range f.r {
+				if r == e {
+					return i, append(buf, f.s, in[:i])
+				}
 			}
 		}
-		return len(in)
+		return len(in), append(buf, f.s, in)
 
-	// charset parameter
+	// include parameter fragment
 	case 2:
 		for i, r := range in {
-			if r == '/' {
-				return i
-			}
-			for j := 0; j < len(s.r); j += 2 {
-				if s.r[j] <= r && r <= s.r[j+1] {
+			for j := 0; j < len(f.r); j += 2 {
+				if f.r[j] <= r && r <= f.r[j+1] {
 					goto ok
 				}
 			}
-			return 0
+			return i, append(buf, f.s, in[:i])
 		ok:
 		}
-		return len(in)
+		return len(in), append(buf, f.s, in)
 
-	// wildcard affix
+	// wildcard fragment
 	case 3:
-		return len(in)
+		return len(in), append(buf, "*", in)
 	}
 
 	panic("unreachable")
 }
 
-// Name returns the parameter name of the segment.
-func (s *segment) Name() string {
-	switch s.t {
-	case 1, 2:
-		return s.s
-	case 3:
-		return "*"
+// compilePattern compiles a pattern (as a sequence of fragments) according
+// to the inputted format string.
+func compilePattern(in string) (pattern, error) {
+	var i int
+	var o pattern
+
+	if in == "" {
+		return nil, errEmptyPattern
 	}
-	return ""
+
+	for i < len(in) {
+		f, n, err := readFragment(in[i:])
+		if err != nil {
+			return nil, err
+		}
+
+		o = append(o, f)
+		i += n
+	}
+
+	return o, nil
+}
+
+func readFragment(in string) (fragment, int, error) {
+	switch in[0] {
+	default:
+		return readLiteral(in)
+	case '*':
+		return readWildcard(in)
+	case '{':
+		return readParameter(in)
+	}
+}
+
+func readLiteral(in string) (fragment, int, error) {
+	var i int
+	var e bool
+
+	for i = 0; i < len(in); i++ {
+		switch c := in[i]; {
+		case e:
+			e = false
+		case c == '\\':
+			e = true
+		case c == '*', c == '{':
+			return fragment{t: 0, s: in[:i]}, i, nil
+		}
+	}
+
+	return fragment{t: 0, s: in[:i]}, i, nil
+}
+
+func readWildcard(in string) (fragment, int, error) {
+	if in != "*" {
+		return fragment{}, 0, errIllegalWildcard
+	}
+	return fragment{t: 3}, 1, nil
+}
+
+func readParameter(in string) (fragment, int, error) {
+	var i int
+	var e bool
+
+	for i = 1; i < len(in); i++ {
+		switch c := in[i]; {
+		case e:
+			e = false
+
+		case c == '\\':
+			e = true
+
+		case c == '[':
+			chars, n, err := readCharset(in[i:])
+			if err != nil {
+				return fragment{}, 0, err
+			}
+
+			// before returning, make sure the charset block is
+			// followed by a '}'
+			if i := i + n; i == len(in) || in[i] != '}' {
+				return fragment{}, 0, errMissingRBrace
+			}
+
+			return fragment{t: 2, s: in[1:i], r: chars}, i + n + 1, nil
+
+		case c == '}':
+			if i == 1 {
+				return fragment{}, 0, errEmptyParameter
+			}
+
+			// if available, add the next rune to exclusive parameters (for
+			// example: '-' for {foo} in "/{foo}-bar")
+			for _, r := range in[i+1:] {
+				if r == '/' {
+					break
+				}
+				return fragment{t: 1, s: in[1:i], r: []rune{r, '/'}}, i + 1, nil
+			}
+
+			return fragment{t: 1, s: in[1:i], r: []rune{'/'}}, i + 1, nil
+		}
+	}
+
+	return fragment{}, 0, errMissingRBrace
+}
+
+func readCharset(in string) ([]rune, int, error) {
+	var o []rune
+	var e bool
+
+	// begin with some rudimentary error checking
+	if len(in) < 2 {
+		return nil, 0, errMissingRBracket
+	} else if in[1] == ']' {
+		return nil, 0, errEmptyCharset
+	}
+
+loop:
+	for i, r := range in[1:] {
+		if !e {
+			switch r {
+			case '\\':
+				e = true
+				continue loop
+
+			case '[':
+				return nil, 0, errUnexpectedLBracket
+
+			case ']':
+				if len(o)&1 != 0 {
+					return nil, 0, errUnexpectedRBracket
+				}
+
+				// make sure the charset doesn't include forward slash
+				for i := 0; i < len(o); i += 2 {
+					if o[i] <= '/' && '/' <= o[i+1] {
+						return nil, 0, errCharsetHasSlash
+					}
+				}
+
+				return o, i + 2, nil
+
+			case '-':
+				// catch ambiguous range statements like "a-c-e"
+				if len(o) == 0 || o[len(o)-1] != o[len(o)-2] {
+					return nil, 0, errUnexpectedHyphen
+				}
+
+				o = o[:len(o)-1]
+				continue loop
+			}
+		}
+
+		// determine whether or not this character is the upper bound
+		// of a charset range
+		if len(o)&1 != 0 {
+			if r < o[len(o)-1] {
+				return nil, 0, errImpossibleRange
+			}
+			o = append(o, r)
+		} else {
+			o = append(o, r, r)
+		}
+
+		e = false
+	}
+
+	return nil, 0, errMissingRBracket
 }

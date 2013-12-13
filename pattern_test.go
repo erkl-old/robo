@@ -4,74 +4,110 @@ import (
 	"testing"
 )
 
-var patternTests = []struct {
-	pattern pattern
-	input   string
-	ok      bool
-	params  map[string]string
-}{
-	{[]segment{segment{0, "/", nil}}, "/", true, nil},
-	{[]segment{segment{0, "/foo/", nil}, segment{3, "", nil}}, "/foo/bar", true, map[string]string{"*": "bar"}},
-	{[]segment{segment{0, "/foo/", nil}, segment{3, "", nil}}, "/foo-bar", false, nil},
-	{[]segment{segment{0, "/", nil}, segment{1, "a", nil}}, "/foo", true, map[string]string{"a": "foo"}},
-	{[]segment{segment{0, "/", nil}, segment{1, "b", nil}}, "/foo-bar", true, map[string]string{"b": "foo-bar"}},
-	{[]segment{segment{0, "/", nil}, segment{1, "b", nil}}, "/foo/bar", false, nil},
-	{[]segment{segment{0, "/", nil}, segment{1, "a", nil}, segment{0, "/", nil}, segment{2, "b", []rune{'a', 'z'}}}, "/foo/bar", true, map[string]string{"a": "foo", "b": "bar"}},
-	{[]segment{segment{0, "/", nil}, segment{1, "a", nil}, segment{0, "/", nil}, segment{2, "b", []rune{'a', 'z'}}}, "/foo/123", false, nil},
+type patternCheck struct {
+	input  string
+	ok     bool
+	params []string
 }
 
-func TestPatternMatch(t *testing.T) {
+var patternTests = []struct {
+	format string
+	err    error
+	checks []patternCheck
+}{
+	// legal
+	{"/", nil, []patternCheck{
+		{"/", true, nil},
+		{"//", false, nil},
+		{"/foo", false, nil},
+	}},
+	{"/foo", nil, []patternCheck{
+		{"/", false, nil},
+		{"/foo", true, nil},
+		{"/foo/", false, nil},
+		{"/foo/bar", false, nil},
+	}},
+	{"*", nil, []patternCheck{
+		{"/", true, []string{"*", "/"}},
+		{"/foo", true, []string{"*", "/foo"}},
+		{"/foo/bar/", true, []string{"*", "/foo/bar/"}},
+	}},
+	{"/foo/*", nil, []patternCheck{
+		{"/", false, nil},
+		{"/foo", false, nil},
+		{"/foo/bar", true, []string{"*", "bar"}},
+		{"/foo/bar/qux", true, []string{"*", "bar/qux"}},
+	}},
+	{"/{foo}", nil, []patternCheck{
+		{"/", false, nil},
+		{"/fo", true, []string{"foo", "fo"}},
+		{"/foo", true, []string{"foo", "foo"}},
+		{"/fooo", true, []string{"foo", "fooo"}},
+		{"/foo-bar", true, []string{"foo", "foo-bar"}},
+		{"/foo/bar", false, nil},
+	}},
+	{"/{foo[a-z]}", nil, []patternCheck{
+		{"/", false, nil},
+		{"/foo", true, []string{"foo", "foo"}},
+		{"/f00", false, nil},
+		{"/foo/bar", false, nil},
+	}},
+	{"/{foo}-{bar}", nil, []patternCheck{
+		{"/", false, nil},
+		{"/foo-bar", true, []string{"foo", "foo", "bar", "bar"}},
+		{"/foo-", false, nil},
+		{"/f00", false, nil},
+		{"/foo/bar", false, nil},
+	}},
+	{"/{foo[a-z]}{bar[0-9]}", nil, []patternCheck{
+		{"/", false, nil},
+		{"/foo123", true, []string{"foo", "foo", "bar", "123"}},
+		{"/f1", true, []string{"foo", "f", "bar", "1"}},
+		{"/foo", false, nil},
+		{"/123", false, nil},
+	}},
+
+	// illegal
+	{"", errEmptyPattern, nil},
+	{"/*/foo", errIllegalWildcard, nil},
+	{"/{foo", errMissingRBrace, nil},
+	{"/{foo[]}", errEmptyCharset, nil},
+	{"/{foo[}", errMissingRBracket, nil},
+	{"/{foo[\\]}", errMissingRBracket, nil},
+	{"/{foo[a-]}", errUnexpectedRBracket, nil},
+	{"/{foo[abc[]}", errUnexpectedLBracket, nil},
+	{"/{foo[z-a]}", errImpossibleRange, nil},
+	{"/{foo[a-b-c]}", errUnexpectedHyphen, nil},
+}
+
+func TestPattern(t *testing.T) {
 	for _, test := range patternTests {
-		ok, params := test.pattern.match(test.input)
-		if ok != test.ok || len(params) != len(test.params) {
-			goto fail
+		pattern, err := compilePattern(test.format)
+		if err != test.err {
+			t.Errorf("compilePattern(%q):", test.format)
+			t.Errorf("  got  %v", err)
+			t.Errorf("  want %v", test.err)
+			continue
 		}
 
-		for key := range params {
-			if params[key] != test.params[key] {
+		for _, check := range test.checks {
+			ok, params := pattern.Match(check.input, nil)
+			if ok != check.ok || len(params) != len(check.params) {
 				goto fail
 			}
-		}
 
-		continue
+			for i := range params {
+				if params[i] != check.params[i] {
+					goto fail
+				}
+			}
 
-	fail:
-		t.Errorf("%+v.match(%q):", test.pattern, test.input)
-		t.Errorf("  got  %v, %+v", test.ok, test.params)
-		t.Errorf("  want %v, %+v", ok, params)
-	}
-}
+			continue
 
-var segmentTests = []struct {
-	segment segment
-	input   string
-	n       int
-}{
-	{segment{0, "/foo", nil}, "/foo", 4},
-	{segment{0, "/foo", nil}, "/bar", 0},
-	{segment{0, "/foo", nil}, "/foo/bar", 4},
-	{segment{0, "/foo/", nil}, "/foo/bar", 5},
-
-	{segment{1, "", nil}, "foo", 3},
-	{segment{1, "", nil}, "foo/bar", 3},
-	{segment{1, "", nil}, "/bar", 0},
-
-	{segment{2, "", []rune{'a', 'z'}}, "foo", 3},
-	{segment{2, "", []rune{'a', 'z'}}, "foo/", 3},
-	{segment{2, "", []rune{'a', 'z'}}, "/foo", 0},
-	{segment{2, "", []rune{'a', 'z', '0', '9'}}, "1a23foo", 7},
-
-	{segment{3, "", nil}, "foo", 3},
-	{segment{3, "", nil}, "foo/bar", 7},
-	{segment{3, "", nil}, "/a/b/c//", 8},
-}
-
-func TestSegmentMatch(t *testing.T) {
-	for _, test := range segmentTests {
-		if n := test.segment.match(test.input); n != test.n {
-			t.Errorf("%+v.match(%q)", test.segment, test.input)
-			t.Errorf("  got  %d", n)
-			t.Errorf("  want %d", test.n)
+		fail:
+			t.Errorf("%v.Match(%q):", pattern, check.input)
+			t.Errorf("  got  %v, %+v", ok, params)
+			t.Errorf("  want %v, %+v", check.ok, check.params)
 		}
 	}
 }
