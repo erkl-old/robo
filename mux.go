@@ -74,14 +74,57 @@ func NewMux() *Mux {
 	return new(Mux)
 }
 
-// Add registers a set of handlers for the given HTTP method and URL pattern.
-//
-// The following types are valid handler arguments:
-//     robo.Handler
-//     http.Handler
-//     func(w robo.ResponseWriter, r *robo.Request)
-//     func(w http.ResponseWriter, r *http.Request)
-func (m *Mux) Add(method, pattern string, handlers ...interface{}) {
+// Any registers a new set of handlers listening to all requests for
+// the specified URL pattern.
+func (m *Mux) Any(pattern string, handlers ...interface{}) {
+	m.add("", pattern, handlers)
+}
+
+// Get registers a new set of handlers listening to GET requests for
+// the specified URL pattern.
+func (m *Mux) Get(pattern string, handlers ...interface{}) {
+	m.add("GET", pattern, handlers)
+}
+
+// Head registers a new set of handlers listening to HEAD requests for
+// the specified URL pattern.
+func (m *Mux) Head(pattern string, handlers ...interface{}) {
+	m.add("HEAD", pattern, handlers)
+}
+
+// Post registers a new set of handlers listening to POST requests for
+// the specified URL pattern.
+func (m *Mux) Post(pattern string, handlers ...interface{}) {
+	m.add("POST", pattern, handlers)
+}
+
+// Put registers a new set of handlers listening to PUT requests for
+// the specified URL pattern.
+func (m *Mux) Put(pattern string, handlers ...interface{}) {
+	m.add("PUT", pattern, handlers)
+}
+
+// Patch registers a new set of handlers listening to PATCH requests for
+// the specified URL pattern.
+func (m *Mux) Patch(pattern string, handlers ...interface{}) {
+	m.add("PATCH", pattern, handlers)
+}
+
+// Delete registers a new set of handlers listening to DELETE requests for
+// the specified URL pattern.
+func (m *Mux) Delete(pattern string, handlers ...interface{}) {
+	m.add("DELETE", pattern, handlers)
+}
+
+// Options registers a new set of handlers listening to OPTIONS requests for
+// the specified URL pattern.
+func (m *Mux) Options(pattern string, handlers ...interface{}) {
+	m.add("OPTIONS", pattern, handlers)
+}
+
+// add registers a set of handlers for the given HTTP method ("" matching
+// any method) and URL pattern.
+func (m *Mux) add(method, pattern string, handlers ...interface{}) {
 	if len(handlers) == 0 {
 		panic("no handlers provided")
 	}
