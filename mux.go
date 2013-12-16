@@ -149,13 +149,16 @@ func (r *route) check(method, path string) (bool, map[string]string) {
 		return false, nil
 	}
 
-	// generate a map of *
-	params := make(map[string]string)
-	for i := 0; i < len(list); i += 2 {
-		params[list[i]] = list[i+1]
+	// only build the parameter map if we have to
+	if len(list) > 0 {
+		params := make(map[string]string)
+		for i := 0; i < len(list); i += 2 {
+			params[list[i]] = list[i+1]
+		}
+		return true, params
 	}
 
-	return true, params
+	return true, nil
 }
 
 // The queue type holds the routing state of an incoming request.
