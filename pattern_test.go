@@ -111,3 +111,39 @@ func TestPattern(t *testing.T) {
 		}
 	}
 }
+
+var simplifyCharsetTests = []struct {
+	input  []rune
+	output []rune
+}{
+	{[]rune{'a', 'z'}, []rune{'a', 'z'}},
+	{[]rune{'a', 'a', 'b', 'b', 'c', 'c', 'd', 'd'}, []rune{'a', 'd'}},
+	{[]rune{'a', 'a', 'c', 'c', 'd', 'd'}, []rune{'a', 'a', 'c', 'd'}},
+	{[]rune{'a', 'b', 'c', 'd', 'e', 'f'}, []rune{'a', 'f'}},
+	{[]rune{'a', 'f', 'b', 'c', 'd', 'e'}, []rune{'a', 'f'}},
+}
+
+func TestSimplifyCharset(t *testing.T) {
+	for _, test := range simplifyCharsetTests {
+		dup := make([]rune, len(test.input))
+		copy(dup, test.input)
+
+		output := simplifyCharset(dup)
+		if len(output) != len(test.output) {
+			goto fail
+		}
+
+		for i := range output {
+			if output[i] != test.output[i] {
+				goto fail
+			}
+		}
+
+		continue
+
+	fail:
+		t.Errorf("simplifyCharset(%q):", test.input)
+		t.Errorf("   got  %q", output)
+		t.Errorf("   want %q", test.output)
+	}
+}

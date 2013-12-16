@@ -247,7 +247,7 @@ loop:
 					}
 				}
 
-				return o, i + 2, nil
+				return simplifyCharset(o), i + 2, nil
 
 			case '-':
 				// catch ambiguous range statements like "a-c-e"
@@ -275,4 +275,51 @@ loop:
 	}
 
 	return nil, 0, errMissingRBracket
+}
+
+func simplifyCharset(a []rune) []rune {
+	if len(a) == 0 {
+		return a
+	}
+
+	// sort the pairs in the charset
+	for i := 2; i < len(a); i += 2 {
+		for j := i; j > 0; j -= 2 {
+			if a[j] > a[j-2] || (a[j] == a[j-2] && a[j] > a[j-2]) {
+				break
+			}
+			a[j-2], a[j+0] = a[j+0], a[j-2]
+			a[j-1], a[j+1] = a[j+1], a[j-1]
+		}
+	}
+
+	// merge overlapping pairs
+	r := 2
+	w := 2
+
+	for ; r < len(a); r += 2 {
+		if a[r] <= a[w-2] {
+			if a[w-2] <= a[r+1]+1 {
+				goto merge
+			}
+		} else if a[r]-1 <= a[w-1] {
+			goto merge
+		}
+
+		a[w] = a[r]
+		a[w+1] = a[r+1]
+		w += 2
+
+		continue
+
+	merge:
+		if a[r] < a[w-2] {
+			a[w-2] = a[r]
+		}
+		if a[r+1] > a[w-1] {
+			a[w-1] = a[r+1]
+		}
+	}
+
+	return a[:w]
 }
