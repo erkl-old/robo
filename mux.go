@@ -102,6 +102,16 @@ func (m *Mux) Add(method, pattern string, handlers ...interface{}) {
 	m.routes = append(m.routes, newRoute(method, pattern, clean))
 }
 
+// newRoute initializes a new route.
+func newRoute(method, rawPattern string, handlers []Handler) route {
+	pattern, err := compilePattern(rawPattern)
+	if err != nil {
+		panic(err)
+	}
+
+	return route{method, pattern, handlers}
+}
+
 // ServeRoboHTTP dispatches the request to matching routes registered with
 // the Mux instance.
 func (m *Mux) ServeRoboHTTP(w ResponseWriter, r *Request) {
@@ -118,30 +128,29 @@ func (m *Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // The route type describes a registered route.
 type route struct {
 	method   string
-	pattern  string
+	pattern  pattern
 	handlers []Handler
-
-	// @todo
-}
-
-// newRoute compiles a new route. Will panic() when the pattern contains
-// a syntax error.
-func newRoute(method, pattern string, handlers []Handler) route {
-	r := route{
-		method:   method,
-		pattern:  pattern,
-		handlers: handlers,
-	}
-
-	// @todo
-	return r
 }
 
 // check tests whether the route matches a provided method and path. The
 // parameter map will always be non-nil when the first is true.
 func (r *route) check(method, path string) (bool, map[string]string) {
-	// @todo
-	return false, nil
+	if r.method != method && r.method != "" {
+		return false, nil
+	}
+
+	ok, list := r.pattern.Match(path, nil)
+	if !ok {
+		return false, nil
+	}
+
+	// generate a map of *
+	params := make(map[string]string)
+	for i := 0; i < len(list); i += 2 {
+		params[list[i]] = list[i+1]
+	}
+
+	return true, params
 }
 
 // The queue type holds the routing state of an incoming request.
