@@ -77,49 +77,49 @@ func NewMux() *Mux {
 // Any registers a new set of handlers listening to all requests for
 // the specified URL pattern.
 func (m *Mux) Any(pattern string, handlers ...interface{}) {
-	m.add("", pattern, handlers)
+	m.add("", pattern, handlers...)
 }
 
 // Get registers a new set of handlers listening to GET requests for
 // the specified URL pattern.
 func (m *Mux) Get(pattern string, handlers ...interface{}) {
-	m.add("GET", pattern, handlers)
+	m.add("GET", pattern, handlers...)
 }
 
 // Head registers a new set of handlers listening to HEAD requests for
 // the specified URL pattern.
 func (m *Mux) Head(pattern string, handlers ...interface{}) {
-	m.add("HEAD", pattern, handlers)
+	m.add("HEAD", pattern, handlers...)
 }
 
 // Post registers a new set of handlers listening to POST requests for
 // the specified URL pattern.
 func (m *Mux) Post(pattern string, handlers ...interface{}) {
-	m.add("POST", pattern, handlers)
+	m.add("POST", pattern, handlers...)
 }
 
 // Put registers a new set of handlers listening to PUT requests for
 // the specified URL pattern.
 func (m *Mux) Put(pattern string, handlers ...interface{}) {
-	m.add("PUT", pattern, handlers)
+	m.add("PUT", pattern, handlers...)
 }
 
 // Patch registers a new set of handlers listening to PATCH requests for
 // the specified URL pattern.
 func (m *Mux) Patch(pattern string, handlers ...interface{}) {
-	m.add("PATCH", pattern, handlers)
+	m.add("PATCH", pattern, handlers...)
 }
 
 // Delete registers a new set of handlers listening to DELETE requests for
 // the specified URL pattern.
 func (m *Mux) Delete(pattern string, handlers ...interface{}) {
-	m.add("DELETE", pattern, handlers)
+	m.add("DELETE", pattern, handlers...)
 }
 
 // Options registers a new set of handlers listening to OPTIONS requests for
 // the specified URL pattern.
 func (m *Mux) Options(pattern string, handlers ...interface{}) {
-	m.add("OPTIONS", pattern, handlers)
+	m.add("OPTIONS", pattern, handlers...)
 }
 
 // add registers a set of handlers for the given HTTP method ("" matching
