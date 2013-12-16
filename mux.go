@@ -69,6 +69,11 @@ type Mux struct {
 	routes []route
 }
 
+// NewMux returns a new Mux instance.
+func NewMux() *Mux {
+	return new(Mux)
+}
+
 // Add registers a set of handlers for the given HTTP method and URL pattern.
 //
 // The following types are valid handler arguments:
