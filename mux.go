@@ -201,4 +201,7 @@ func (q *queue) serveNext(w ResponseWriter, hr *http.Request) {
 		r.handlers[0].ServeRoboHTTP(w, &Request{hr, q.params, q})
 		return
 	}
+
+	// when we run out of routes, send a 404 message
+	http.Error(w, "Not found.\n", 404)
 }
