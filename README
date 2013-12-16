@@ -15,7 +15,7 @@ something like this:
 
     func main() {
         mux := robo.NewMux()
-        mux.Add("GET", "/hello/{name}", hello)
+        mux.Get("/hello/{name}", hello)
         http.ListenAndServe(":3000", mux)
     }
 
