@@ -24,10 +24,10 @@ var (
 // A pattern is a compiled URL pattern matcher.
 type pattern []fragment
 
-// Match returns true as well as a slice of captured parameters in the form
+// match returns true as well as a slice of captured parameters in the form
 // of [key, value] pairs (appended to buf), if the input string matches the
 // pattern.
-func (p pattern) Match(in string, buf []string) (bool, []string) {
+func (p pattern) match(in string, buf []string) (bool, []string) {
 	var n int
 
 	// check each fragment in order
@@ -36,7 +36,7 @@ func (p pattern) Match(in string, buf []string) (bool, []string) {
 			return false, nil
 		}
 
-		n, buf = f.Match(in, buf)
+		n, buf = f.match(in, buf)
 		if n == 0 {
 			return false, nil
 		}
@@ -60,8 +60,8 @@ type fragment struct {
 	r []rune
 }
 
-// Match is the fragment-level equivalent of pattern.Match.
-func (f *fragment) Match(in string, buf []string) (int, []string) {
+// match is the fragment-level equivalent of pattern.match.
+func (f *fragment) match(in string, buf []string) (int, []string) {
 	switch f.t {
 	// literal fragment
 	case 0:

@@ -91,7 +91,7 @@ func TestPattern(t *testing.T) {
 		}
 
 		for _, check := range test.checks {
-			ok, params := pattern.Match(check.input, nil)
+			ok, params := pattern.match(check.input, nil)
 			if ok != check.ok || len(params) != len(check.params) {
 				goto fail
 			}
@@ -105,7 +105,7 @@ func TestPattern(t *testing.T) {
 			continue
 
 		fail:
-			t.Errorf("%v.Match(%q):", pattern, check.input)
+			t.Errorf("%v.match(%q):", pattern, check.input)
 			t.Errorf("  got  %v, %+v", ok, params)
 			t.Errorf("  want %v, %+v", check.ok, check.params)
 		}

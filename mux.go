@@ -144,7 +144,7 @@ func (r *route) check(method, path string) (bool, map[string]string) {
 		return false, nil
 	}
 
-	ok, list := r.pattern.Match(path, nil)
+	ok, list := r.pattern.match(path, nil)
 	if !ok {
 		return false, nil
 	}
