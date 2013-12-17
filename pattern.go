@@ -32,12 +32,8 @@ func (p pattern) match(in string, buf []string) (bool, []string) {
 
 	// check each fragment in order
 	for _, f := range p {
-		if in == "" {
-			return false, nil
-		}
-
 		n, buf = f.match(in, buf)
-		if n == 0 {
+		if n < 0 {
 			return false, nil
 		}
 
@@ -66,17 +62,20 @@ func (f *fragment) match(in string, buf []string) (int, []string) {
 	// literal fragment
 	case 0:
 		if len(in) < len(f.s) {
-			return 0, nil
+			return -1, nil
 		}
 		for i := 0; i < len(f.s); i++ {
 			if f.s[i] != in[i] {
-				return 0, nil
+				return -1, nil
 			}
 		}
 		return len(f.s), buf
 
 	// exclusive parameter fragment
 	case 1:
+		if in == "" {
+			return -1, nil
+		}
 		for i, r := range in {
 			for _, e := range f.r {
 				if r == e {
@@ -88,11 +87,17 @@ func (f *fragment) match(in string, buf []string) (int, []string) {
 
 	// include parameter fragment
 	case 2:
+		if in == "" {
+			return -1, nil
+		}
 		for i, r := range in {
 			for j := 0; j < len(f.r); j += 2 {
 				if f.r[j] <= r && r <= f.r[j+1] {
 					goto ok
 				}
+			}
+			if i == 0 {
+				return -1, nil
 			}
 			return i, append(buf, f.s, in[:i])
 		ok:

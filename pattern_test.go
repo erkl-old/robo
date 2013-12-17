@@ -35,6 +35,7 @@ var patternTests = []struct {
 	{"/foo/*", nil, []patternCheck{
 		{"/", false, nil},
 		{"/foo", false, nil},
+		{"/foo/", true, []string{"*", ""}},
 		{"/foo/bar", true, []string{"*", "bar"}},
 		{"/foo/bar/qux", true, []string{"*", "bar/qux"}},
 	}},
