@@ -5,19 +5,17 @@ import (
 )
 
 var (
-	errEmptyPattern   = errors.New("robo: empty pattern")
-	errEmptyParameter = errors.New("robo: empty parameter name")
-	errEmptyCharset   = errors.New("robo: empty charset")
-
-	errCharsetHasSlash = errors.New("robo: parameter charset includes '/'")
-	errIllegalWildcard = errors.New("robo: illegal '*' position")
-	errImpossibleRange = errors.New("robo: impossible charset range")
-
+	errEmptyPattern       = errors.New("robo: empty pattern")
+	errEmptyParameter     = errors.New("robo: empty parameter name")
+	errEmptyCharset       = errors.New("robo: empty charset")
 	errUnexpectedHyphen   = errors.New("robo: unexpected '-'")
 	errUnexpectedLBracket = errors.New("robo: unexpected '['")
 	errUnexpectedRBracket = errors.New("robo: unexpected ']'")
 	errMissingRBrace      = errors.New("robo: missing closing '}'")
 	errMissingRBracket    = errors.New("robo: missing closing ']'")
+	errCharsetHasSlash    = errors.New("robo: parameter charset includes '/'")
+	errImpossibleRange    = errors.New("robo: impossible charset range")
+	errIllegalWildcard    = errors.New("robo: illegal '*' position")
 )
 
 // The pathMatcher interface is used to match the paths of incoming requests.

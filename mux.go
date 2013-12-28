@@ -196,7 +196,7 @@ type route struct {
 // check tests whether the route matches a provided method and path. The
 // parameter map will always be non-nil when the first is true.
 func (r *route) check(method, path string) (bool, map[string]string) {
-	if r.method != method && r.method != "" {
+	if method != r.method && r.method != "" {
 		return false, nil
 	}
 
