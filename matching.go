@@ -45,6 +45,16 @@ func compileMatcher(pattern string) (pathMatcher, error) {
 		pattern = pattern[n:]
 	}
 
+	// replace the standard fragmentMatcher with faster equivalents
+	// when possible
+	switch {
+	case len(fs) == 1 && fs[0].t == literalFragment:
+		return &literalMatcher{fs[0].s}, nil
+	case len(fs) == 2 && fs[0].t == literalFragment &&
+		fs[1].t == wildcardFragment:
+		return &prefixMatcher{fs[0].s, fs[0].n}, nil
+	}
+
 	return &fragmentMatcher{fs}, nil
 }
 
@@ -248,16 +258,38 @@ func simplifyCharset(a []rune) []rune {
 	return a[:w]
 }
 
+// literalMatcher matches an exact path.
+type literalMatcher struct {
+	s string
+}
+
+func (lm *literalMatcher) match(in string, buf []string) (bool, []string) {
+	return in == lm.s, buf
+}
+
+// prefixMatcher matches a path prefix.
+type prefixMatcher struct {
+	s string
+	n int
+}
+
+func (pm *prefixMatcher) match(in string, buf []string) (bool, []string) {
+	if len(in) >= pm.n && in[:pm.n] == pm.s {
+		return true, append(buf, "*", in[pm.n:])
+	}
+	return false, nil
+}
+
 // fragmentMatcher is an implementation of the pathMatcher interface,
 // which matches input strings using precompiled fragments.
 type fragmentMatcher struct {
 	fs []fragment
 }
 
-func (f *fragmentMatcher) match(path string, buf []string) (bool, []string) {
+func (fm *fragmentMatcher) match(path string, buf []string) (bool, []string) {
 	var n int
 
-	for _, f := range f.fs {
+	for _, f := range fm.fs {
 		n, buf = f.matchPrefix(path, buf)
 		if n < 0 {
 			return false, nil
