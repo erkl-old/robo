@@ -4,42 +4,41 @@ import (
 	"testing"
 )
 
-type patternCheck struct {
-	input  string
-	ok     bool
-	params []string
+type matcherCheck struct {
+	pattern string
+	ok      bool
+	params  []string
 }
 
-var patternTests = []struct {
+var matcherTests = []struct {
 	format string
 	err    error
-	checks []patternCheck
+	checks []matcherCheck
 }{
-	// legal
-	{"/", nil, []patternCheck{
+	{"/", nil, []matcherCheck{
 		{"/", true, nil},
 		{"//", false, nil},
 		{"/foo", false, nil},
 	}},
-	{"/foo", nil, []patternCheck{
+	{"/foo", nil, []matcherCheck{
 		{"/", false, nil},
 		{"/foo", true, nil},
 		{"/foo/", false, nil},
 		{"/foo/bar", false, nil},
 	}},
-	{"*", nil, []patternCheck{
+	{"*", nil, []matcherCheck{
 		{"/", true, []string{"*", "/"}},
 		{"/foo", true, []string{"*", "/foo"}},
 		{"/foo/bar/", true, []string{"*", "/foo/bar/"}},
 	}},
-	{"/foo/*", nil, []patternCheck{
+	{"/foo/*", nil, []matcherCheck{
 		{"/", false, nil},
 		{"/foo", false, nil},
 		{"/foo/", true, []string{"*", ""}},
 		{"/foo/bar", true, []string{"*", "bar"}},
 		{"/foo/bar/qux", true, []string{"*", "bar/qux"}},
 	}},
-	{"/{foo}", nil, []patternCheck{
+	{"/{foo}", nil, []matcherCheck{
 		{"/", false, nil},
 		{"/fo", true, []string{"foo", "fo"}},
 		{"/foo", true, []string{"foo", "foo"}},
@@ -47,20 +46,20 @@ var patternTests = []struct {
 		{"/foo-bar", true, []string{"foo", "foo-bar"}},
 		{"/foo/bar", false, nil},
 	}},
-	{"/{foo[a-z]}", nil, []patternCheck{
+	{"/{foo[a-z]}", nil, []matcherCheck{
 		{"/", false, nil},
 		{"/foo", true, []string{"foo", "foo"}},
 		{"/f00", false, nil},
 		{"/foo/bar", false, nil},
 	}},
-	{"/{foo}-{bar}", nil, []patternCheck{
+	{"/{foo}-{bar}", nil, []matcherCheck{
 		{"/", false, nil},
 		{"/foo-bar", true, []string{"foo", "foo", "bar", "bar"}},
 		{"/foo-", false, nil},
 		{"/f00", false, nil},
 		{"/foo/bar", false, nil},
 	}},
-	{"/{foo[a-z]}{bar[0-9]}", nil, []patternCheck{
+	{"/{foo[a-z]}{bar[0-9]}", nil, []matcherCheck{
 		{"/", false, nil},
 		{"/foo123", true, []string{"foo", "foo", "bar", "123"}},
 		{"/f1", true, []string{"foo", "f", "bar", "1"}},
@@ -68,7 +67,6 @@ var patternTests = []struct {
 		{"/123", false, nil},
 	}},
 
-	// illegal
 	{"", errEmptyPattern, nil},
 	{"/*/foo", errIllegalWildcard, nil},
 	{"/{foo", errMissingRBrace, nil},
@@ -81,18 +79,18 @@ var patternTests = []struct {
 	{"/{foo[a-b-c]}", errUnexpectedHyphen, nil},
 }
 
-func TestPattern(t *testing.T) {
-	for _, test := range patternTests {
-		pattern, err := compilePattern(test.format)
+func TestMatcher(t *testing.T) {
+	for _, test := range matcherTests {
+		matcher, err := compileMatcher(test.format)
 		if err != test.err {
-			t.Errorf("compilePattern(%q):", test.format)
+			t.Errorf("compileMatcher(%q):", test.format)
 			t.Errorf("  got  %v", err)
 			t.Errorf("  want %v", test.err)
 			continue
 		}
 
 		for _, check := range test.checks {
-			ok, params := pattern.match(check.input, nil)
+			ok, params := matcher.match(check.pattern, nil)
 			if ok != check.ok || len(params) != len(check.params) {
 				goto fail
 			}
@@ -106,7 +104,7 @@ func TestPattern(t *testing.T) {
 			continue
 
 		fail:
-			t.Errorf("%v.match(%q):", pattern, check.input)
+			t.Errorf("%+v.match(%q):", matcher, check.pattern)
 			t.Errorf("  got  %v, %+v", ok, params)
 			t.Errorf("  want %v, %+v", check.ok, check.params)
 		}

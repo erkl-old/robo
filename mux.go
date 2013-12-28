@@ -164,13 +164,13 @@ func (m *Mux) add(method, pattern string, handlers ...interface{}) {
 }
 
 // newRoute initializes a new route.
-func newRoute(method, rawPattern string, handlers []Handler) route {
-	pattern, err := compilePattern(rawPattern)
+func newRoute(method, pattern string, handlers []Handler) route {
+	matcher, err := compileMatcher(pattern)
 	if err != nil {
 		panic(err)
 	}
 
-	return route{method, pattern, handlers}
+	return route{method, matcher, handlers}
 }
 
 // ServeRoboHTTP dispatches the request to matching routes registered with
@@ -189,7 +189,7 @@ func (m *Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // The route type describes a registered route.
 type route struct {
 	method   string
-	pattern  pattern
+	matcher  pathMatcher
 	handlers []Handler
 }
 
@@ -200,7 +200,7 @@ func (r *route) check(method, path string) (bool, map[string]string) {
 		return false, nil
 	}
 
-	ok, list := r.pattern.match(path, nil)
+	ok, list := r.matcher.match(path, nil)
 	if !ok {
 		return false, nil
 	}
