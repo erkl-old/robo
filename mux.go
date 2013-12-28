@@ -2,6 +2,7 @@ package robo
 
 import (
 	"net/http"
+	"net/url"
 )
 
 // Objects implementing the Handler interface are capable of serving
@@ -39,6 +40,9 @@ type ResponseWriter interface {
 type Request struct {
 	*http.Request
 
+	// parsed querystring values
+	query url.Values
+
 	// named URL parameters for this request and route
 	params map[string]string
 
@@ -50,6 +54,15 @@ type Request struct {
 // blocking until said handler has returned.
 func (r *Request) Next(w ResponseWriter) {
 	r.queue.serveNext(w, r.Request)
+}
+
+// Query returns the value of a particular querystring parameter, after
+// lazily parsing the raw querystring.
+func (r *Request) Query(name string) string {
+	if r.query == nil {
+		r.query = r.URL.Query()
+	}
+	return r.query.Get(name)
 }
 
 // Param returns the value of a named URL parameter.
@@ -222,7 +235,7 @@ func (q *queue) serveNext(w ResponseWriter, hr *http.Request) {
 		h := q.handlers[0]
 		q.handlers = q.handlers[1:]
 
-		h.ServeRoboHTTP(w, &Request{hr, q.params, q})
+		h.ServeRoboHTTP(w, &Request{hr, nil, q.params, q})
 		return
 	}
 
@@ -241,7 +254,7 @@ func (q *queue) serveNext(w ResponseWriter, hr *http.Request) {
 		q.params = params
 
 		// invoke the route's first handler
-		r.handlers[0].ServeRoboHTTP(w, &Request{hr, q.params, q})
+		r.handlers[0].ServeRoboHTTP(w, &Request{hr, nil, q.params, q})
 		return
 	}
 
