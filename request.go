@@ -10,13 +10,17 @@ import (
 type Request struct {
 	*http.Request
 
-	// parsed querystring values
+	// parsed querystring values (lazily generated)
 	query url.Values
 
-	// named URL parameters for this request and route
+	// named URL parameters, specific to the route
 	params map[string]string
 
-	// reference to the queue
+	// pointer to the request-local data map, which is stored in the
+	// queue and shared between all routes
+	store *map[string]interface{}
+
+	// reference to the request's queue, used by the Next method
 	queue *queue
 }
 
@@ -38,4 +42,23 @@ func (r *Request) Query(name string) string {
 // Param returns the value of a named URL parameter.
 func (r *Request) Param(name string) string {
 	return r.params[name]
+}
+
+// Get returns a value stored in the request's data store (or nil if
+// it hasn't been defined yet).
+func (r *Request) Get(key string) interface{} {
+	if r.store == nil {
+		return nil
+	}
+	return (*r.store)[key]
+}
+
+// Set stores a value in the request's data store.
+func (r *Request) Set(key string, value interface{}) {
+	if r.store == nil {
+		m := map[string]interface{}{key: value}
+		r.store = &m
+	} else {
+		(*r.store)[key] = value
+	}
 }

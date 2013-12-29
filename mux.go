@@ -104,8 +104,7 @@ func newRoute(method, pattern string, handlers []Handler) *route {
 // ServeRoboHTTP dispatches the request to matching routes registered with
 // the Mux instance.
 func (m *Mux) ServeRoboHTTP(w ResponseWriter, r *Request) {
-	q := &queue{nil, nil, m.routes}
-	q.serveNext(w, r.Request)
+	(&queue{routes: m.routes}).serveNext(w, r.Request)
 }
 
 // ServeHTTP dispatches the request to matching routes registered with
@@ -154,6 +153,9 @@ type queue struct {
 	handlers []Handler
 	params   map[string]string
 
+	// request-local data store
+	store map[string]interface{}
+
 	// remaining routes to be tested
 	routes []*route
 }
@@ -166,7 +168,7 @@ func (q *queue) serveNext(w ResponseWriter, hr *http.Request) {
 		h := q.handlers[0]
 		q.handlers = q.handlers[1:]
 
-		h.ServeRoboHTTP(w, &Request{hr, nil, q.params, q})
+		h.ServeRoboHTTP(w, &Request{hr, nil, q.params, &q.store, q})
 		return
 	}
 
@@ -185,7 +187,7 @@ func (q *queue) serveNext(w ResponseWriter, hr *http.Request) {
 		q.params = params
 
 		// invoke the route's first handler
-		r.handlers[0].ServeRoboHTTP(w, &Request{hr, nil, q.params, q})
+		r.handlers[0].ServeRoboHTTP(w, &Request{hr, nil, q.params, &q.store, q})
 		return
 	}
 
