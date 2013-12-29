@@ -27,7 +27,7 @@ type pathMatcher interface {
 
 // compileMatcher compiles a pathMatcher from a pattern string.
 func compileMatcher(pattern string) (pathMatcher, error) {
-	var fs []fragment
+	var fs []*fragment
 
 	if pattern == "" {
 		return nil, errEmptyPattern
@@ -59,7 +59,7 @@ func compileMatcher(pattern string) (pathMatcher, error) {
 // compileFragment compiles a fragment matcher from a prefix of a pattern
 // string. It returns the compiled fragment, and how many bytes of the input
 // string were consumed.
-func compileFragment(pattern string) (fragment, int, error) {
+func compileFragment(pattern string) (*fragment, int, error) {
 	switch pattern[0] {
 	default:
 		return compileLiteralFragment(pattern)
@@ -70,7 +70,7 @@ func compileFragment(pattern string) (fragment, int, error) {
 	}
 }
 
-func compileLiteralFragment(pattern string) (fragment, int, error) {
+func compileLiteralFragment(pattern string) (*fragment, int, error) {
 	var i int
 	var e bool
 
@@ -81,24 +81,23 @@ func compileLiteralFragment(pattern string) (fragment, int, error) {
 		case c == '\\':
 			e = true
 		case c == '*', c == '{':
-			return fragment{t: literalFragment, s: pattern[:i], n: i}, i, nil
+			return &fragment{t: literalFragment, s: pattern[:i], n: i}, i, nil
 		}
 	}
 
-	return fragment{t: literalFragment, s: pattern[:i], n: i}, i, nil
+	return &fragment{t: literalFragment, s: pattern[:i], n: i}, i, nil
 }
 
-func compileWildcardFragment(pattern string) (fragment, int, error) {
+func compileWildcardFragment(pattern string) (*fragment, int, error) {
 	if pattern != "*" {
-		return fragment{}, 0, errIllegalWildcard
+		return nil, 0, errIllegalWildcard
 	}
-	return fragment{t: wildcardFragment}, 1, nil
+	return &fragment{t: wildcardFragment}, 1, nil
 }
 
-func compileParameterFragment(pattern string) (fragment, int, error) {
+func compileParameterFragment(pattern string) (*fragment, int, error) {
 	var i int
 	var e bool
-	var f fragment
 
 	for i = 1; i < len(pattern); i++ {
 		switch c := pattern[i]; {
@@ -111,24 +110,24 @@ func compileParameterFragment(pattern string) (fragment, int, error) {
 		case c == '[':
 			chars, n, err := compileCharsetFragment(pattern[i:])
 			if err != nil {
-				return f, 0, err
+				return nil, 0, err
 			}
 
 			// before returning, make sure the charset block is
 			// followed by a '}'
 			if i := i + n; i == len(pattern) || pattern[i] != '}' {
-				return fragment{}, 0, errMissingRBrace
+				return nil, 0, errMissingRBrace
 			}
 
-			f = fragment{t: inclusiveFragment, s: pattern[1:i], r: chars}
+			f := &fragment{t: inclusiveFragment, s: pattern[1:i], r: chars}
 			return f, i + n + 1, nil
 
 		case c == '}':
 			if i == 1 {
-				return fragment{}, 0, errEmptyParameter
+				return nil, 0, errEmptyParameter
 			}
 
-			f = fragment{t: exclusiveFragment, s: pattern[1:i], r: []rune{'/'}}
+			f := &fragment{t: exclusiveFragment, s: pattern[1:i], r: []rune{'/'}}
 
 			// if available, add the next rune to exclusive parameters (for
 			// example: '-' for {foo} in "/{foo}-bar")
@@ -143,7 +142,7 @@ func compileParameterFragment(pattern string) (fragment, int, error) {
 		}
 	}
 
-	return f, 0, errMissingRBrace
+	return nil, 0, errMissingRBrace
 }
 
 func compileCharsetFragment(pattern string) ([]rune, int, error) {
@@ -281,7 +280,7 @@ func (pm *prefixMatcher) match(in string, buf []string) (bool, []string) {
 // fragmentMatcher is an implementation of the pathMatcher interface,
 // which matches input strings using precompiled fragments.
 type fragmentMatcher struct {
-	fs []fragment
+	fs []*fragment
 }
 
 func (fm *fragmentMatcher) match(path string, buf []string) (bool, []string) {

@@ -26,7 +26,7 @@ type httpHandler struct {
 	h http.Handler
 }
 
-func (h httpHandler) ServeRoboHTTP(w ResponseWriter, r *Request) {
+func (h *httpHandler) ServeRoboHTTP(w ResponseWriter, r *Request) {
 	h.h.ServeHTTP(w, r.Request)
 }
 
@@ -76,7 +76,7 @@ func (r *Request) Param(name string) string {
 // The zero value for a Mux is a Mux without any registered handlers,
 // ready to use.
 type Mux struct {
-	routes []route
+	routes []*route
 }
 
 // NewMux returns a new Mux instance.
@@ -149,9 +149,9 @@ func (m *Mux) add(method, pattern string, handlers ...interface{}) {
 		case func(w ResponseWriter, r *Request):
 			clean = append(clean, HandlerFunc(h))
 		case http.Handler:
-			clean = append(clean, httpHandler{h})
+			clean = append(clean, &httpHandler{h})
 		case func(w http.ResponseWriter, r *http.Request):
-			clean = append(clean, httpHandler{http.HandlerFunc(h)})
+			clean = append(clean, &httpHandler{http.HandlerFunc(h)})
 		default:
 			panic("not a valid handler")
 		}
@@ -161,19 +161,19 @@ func (m *Mux) add(method, pattern string, handlers ...interface{}) {
 }
 
 // newRoute initializes a new route.
-func newRoute(method, pattern string, handlers []Handler) route {
+func newRoute(method, pattern string, handlers []Handler) *route {
 	matcher, err := compileMatcher(pattern)
 	if err != nil {
 		panic(err)
 	}
 
-	return route{method, matcher, handlers}
+	return &route{method, matcher, handlers}
 }
 
 // ServeRoboHTTP dispatches the request to matching routes registered with
 // the Mux instance.
 func (m *Mux) ServeRoboHTTP(w ResponseWriter, r *Request) {
-	q := queue{nil, nil, m.routes}
+	q := &queue{nil, nil, m.routes}
 	q.serveNext(w, r.Request)
 }
 
@@ -224,7 +224,7 @@ type queue struct {
 	params   map[string]string
 
 	// remaining routes to be tested
-	routes []route
+	routes []*route
 }
 
 // ServeNext attempts to serve an HTTP request using the next matching
