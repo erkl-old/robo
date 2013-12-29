@@ -84,52 +84,19 @@ func NewMux() *Mux {
 	return new(Mux)
 }
 
-// Any registers a new set of handlers listening to all requests for
-// the specified URL pattern.
+// Add registers one or more handlers matching all requests with the specified
+// HTTP method and a path matching the URL pattern.
+func (m *Mux) Add(method string, pattern string, handlers ...interface{}) {
+	if method == "" {
+		panic("method must not be empty")
+	}
+	m.add(method, pattern, handlers...)
+}
+
+// Any registers one or more handlers matching any request with a path matching
+// specific URL pattern, regardless of the HTTP method.
 func (m *Mux) Any(pattern string, handlers ...interface{}) {
 	m.add("", pattern, handlers...)
-}
-
-// Get registers a new set of handlers listening to GET requests for
-// the specified URL pattern.
-func (m *Mux) Get(pattern string, handlers ...interface{}) {
-	m.add("GET", pattern, handlers...)
-}
-
-// Head registers a new set of handlers listening to HEAD requests for
-// the specified URL pattern.
-func (m *Mux) Head(pattern string, handlers ...interface{}) {
-	m.add("HEAD", pattern, handlers...)
-}
-
-// Post registers a new set of handlers listening to POST requests for
-// the specified URL pattern.
-func (m *Mux) Post(pattern string, handlers ...interface{}) {
-	m.add("POST", pattern, handlers...)
-}
-
-// Put registers a new set of handlers listening to PUT requests for
-// the specified URL pattern.
-func (m *Mux) Put(pattern string, handlers ...interface{}) {
-	m.add("PUT", pattern, handlers...)
-}
-
-// Patch registers a new set of handlers listening to PATCH requests for
-// the specified URL pattern.
-func (m *Mux) Patch(pattern string, handlers ...interface{}) {
-	m.add("PATCH", pattern, handlers...)
-}
-
-// Delete registers a new set of handlers listening to DELETE requests for
-// the specified URL pattern.
-func (m *Mux) Delete(pattern string, handlers ...interface{}) {
-	m.add("DELETE", pattern, handlers...)
-}
-
-// Options registers a new set of handlers listening to OPTIONS requests for
-// the specified URL pattern.
-func (m *Mux) Options(pattern string, handlers ...interface{}) {
-	m.add("OPTIONS", pattern, handlers...)
 }
 
 // add registers a set of handlers for the given HTTP method ("" matching
