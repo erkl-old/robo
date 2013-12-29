@@ -67,10 +67,7 @@ func (r *Request) Query(name string) string {
 
 // Param returns the value of a named URL parameter.
 func (r *Request) Param(name string) string {
-	if r.params != nil {
-		return r.params[name]
-	}
-	return ""
+	return r.params[name]
 }
 
 // Mux is a HTTP router. It multiplexes incoming requests to different
@@ -193,6 +190,8 @@ type route struct {
 	handlers []Handler
 }
 
+var emptyParams = make(map[string]string)
+
 // check tests whether the route matches a provided method and path. The
 // parameter map will always be non-nil when the first is true.
 func (r *route) check(method, path string) (bool, map[string]string) {
@@ -205,16 +204,17 @@ func (r *route) check(method, path string) (bool, map[string]string) {
 		return false, nil
 	}
 
-	// only build the parameter map if we have to
-	if len(list) > 0 {
-		params := make(map[string]string)
-		for i := 0; i < len(list); i += 2 {
-			params[list[i]] = list[i+1]
-		}
-		return true, params
+	// don't build the actual parameter map unless we have to
+	if len(list) == 0 {
+		return true, emptyParams
 	}
 
-	return true, nil
+	params := make(map[string]string)
+	for i := 0; i < len(list); i += 2 {
+		params[list[i]] = list[i+1]
+	}
+
+	return true, params
 }
 
 // The queue type holds the routing state of an incoming request.
