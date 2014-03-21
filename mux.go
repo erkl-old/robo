@@ -63,6 +63,31 @@ func (m *Mux) Any(pattern string, handlers ...interface{}) {
 	m.add("", pattern, handlers...)
 }
 
+// Delete registers one or more DELETE handlers.
+func (m *Mux) Delete(pattern string, handlers ...interface{}) {
+	m.add("DELETE", pattern, handlers...)
+}
+
+// Get registers one or more GET handlers.
+func (m *Mux) Get(pattern string, handlers ...interface{}) {
+	m.add("GET", pattern, handlers...)
+}
+
+// Patch registers one or more PATCH handlers.
+func (m *Mux) Patch(pattern string, handlers ...interface{}) {
+	m.add("PATCH", pattern, handlers...)
+}
+
+// Post registers one or more POST handlers.
+func (m *Mux) Post(pattern string, handlers ...interface{}) {
+	m.add("POST", pattern, handlers...)
+}
+
+// Put registers one or more PUT handlers.
+func (m *Mux) Put(pattern string, handlers ...interface{}) {
+	m.add("PUT", pattern, handlers...)
+}
+
 // add registers a set of handlers for the given HTTP method ("" matching
 // any method) and URL pattern.
 func (m *Mux) add(method, pattern string, handlers ...interface{}) {
