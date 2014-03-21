@@ -43,13 +43,12 @@ type Mux struct {
 	routes []*route
 }
 
-// NewMux returns a new Mux instance.
+// NewMux creates a new Mux instance.
 func NewMux() *Mux {
 	return new(Mux)
 }
 
-// Add registers one or more handlers matching all requests with the specified
-// HTTP method and a path matching the URL pattern.
+// Add registers one or more request handlers.
 func (m *Mux) Add(method string, pattern string, handlers ...interface{}) {
 	if method == "" {
 		panic("method must not be empty")
@@ -57,8 +56,7 @@ func (m *Mux) Add(method string, pattern string, handlers ...interface{}) {
 	m.add(method, pattern, handlers...)
 }
 
-// Any registers one or more handlers matching any request with a path matching
-// specific URL pattern, regardless of the HTTP method.
+// Any registers one or more request handlers matching any HTTP method.
 func (m *Mux) Any(pattern string, handlers ...interface{}) {
 	m.add("", pattern, handlers...)
 }
