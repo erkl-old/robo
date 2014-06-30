@@ -18,7 +18,7 @@ type Request struct {
 
 	// pointer to the request-local data map, which is stored in the
 	// queue and shared between all routes
-	store *map[string]interface{}
+	store **map[string]interface{}
 
 	// reference to the request's queue, used by the Next method
 	queue *queue
@@ -47,18 +47,17 @@ func (r *Request) Param(name string) string {
 // Get returns a value stored in the request's data store (or nil if
 // it hasn't been defined yet).
 func (r *Request) Get(key string) interface{} {
-	if r.store == nil {
+	if *r.store == nil {
 		return nil
 	}
-	return (*r.store)[key]
+	return (**r.store)[key]
 }
 
 // Set stores a value in the request's data store.
 func (r *Request) Set(key string, value interface{}) {
-	if r.store == nil {
-		m := map[string]interface{}{key: value}
-		r.store = &m
-	} else {
-		(*r.store)[key] = value
+	if *r.store == nil {
+		m := make(map[string]interface{})
+		*r.store = &m
 	}
+	(**r.store)[key] = value
 }

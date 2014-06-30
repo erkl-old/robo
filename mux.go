@@ -177,7 +177,7 @@ type queue struct {
 	params   map[string]string
 
 	// request-local data store
-	store map[string]interface{}
+	store *map[string]interface{}
 
 	// remaining routes to be tested
 	routes []*route
